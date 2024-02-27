@@ -1,0 +1,28 @@
+> pbmc <- readRDS("germcell.rds")
+> data <- as(as.matrix(pbmc@assays$RNA@counts), 'sparseMatrix')
+> pd <- new('AnnotatedDataFrame', data = pbmc@meta.data)
+> fData <- data.frame(gene_short_name = row.names(data), row.names = row.names(data))
+> fd <- new('AnnotatedDataFrame', data = fData)
+> monocle_cds <- newCellDataSet(data,
+phenoData = pd,
+featureData = fd,
+lowerDetectionLimit = 0.5, expressionFamily = negbinomial.size())
+> head(pData(monocle_cds))
+> names(pData(monocle_cds))[names(pData(monocle_cds))=="RNA_snn_res.0.5"] ="Cluster"
+> monocle_cds <- estimateSizeFactors(monocle_cds)
+> monocle_cds <- estimateDispersions(monocle_cds)
+> monocle_cds <- detectGenes(monocle_cds, min_expr = 0.01) 
+### expressed_genes <- row.names(subset(fData(monocle_cds), num_cells_expressed > nrow(cell_metadata) * 0.01))
+> disp_table <- dispersionTable(monocle_cds)## disp_table <- differentialGeneTest(monocle_cds[expressed_genes,],fullModelFormulaStr = paste("~", "seurat_clusters", sep = ""),cores = 4)
+> unsup_clustering_genes <- subset(disp_table, mean_expression >= 0.1) # ordering_genes <- row.names (subset(disp_table, qval < 1e-200))
+## ordering_genes <- intersect(ordering_genes, expressed_genes)
+> HSMM_myo <- setOrderingFilter(monocle_cds, unsup_clustering_genes$gene_id) #
+> plot_ordering_genes(monocle_cds)
+> monocle_cds <- reduceDimension(monocle_cds, max_components = 2, reduction_method = "DDRTree")
+> monocle_cds <- orderCells(monocle_cds)
+> colnames(pData(monocle_cds))
+> plot_cell_trajectory(monocle_cds, color_by = "orig.ident ")
+>  plot_cell_trajectory(monocle_cds, color_by = "seurat_clusters ")
+>  plot_cell_trajectory(monocle_cds, color_by = "Pseudotime")
+>  plot_cell_trajectory(monocle_cds, color_by = "State")
+>  plot_cell_trajectory(monocle_cds, color_by = "stim")

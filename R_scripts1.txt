@@ -1,0 +1,63 @@
+#1 加载所需的R包和数据集
+library(Seurat)
+library(SeuratData)
+library(cowplot)
+#2 构建Seurat对象
+# 加载数据集
+Ss_singlecell <- readRDS("~/Desktop/Ss_singlecell.Rds")
+# Run the standard workflow for visualization and clustering
+Ss_singlecell <- ScaleData(Ss_singlecell, verbose = FALSE)
+Ss_singlecell <- RunPCA(Ss_singlecell, npcs = 20, verbose = FALSE)
+# t-SNE and Clustering
+Ss_singlecell <- RunUMAP(Ss_singlecell, reduction = "pca", dims = 1:20)
+Ss_singlecell <- FindNeighbors(Ss_singlecell, reduction = "pca", dims = 1:20)
+Ss_singlecell <- FindClusters(Ss_singlecell, resolution = 0.2)
+# Visualization
+p1 <- DimPlot(Ss_singlecell, reduction = "umap", group.by = "stim")
+p2 <- DimPlot(Ss_singlecell, reduction = "umap", label = TRUE)
+plot_grid(p1, p2)
+
+p1 <- DimPlot(Ss_singlecell, reduction = "tsne", group.by = "stim")
+p2 <- DimPlot(Ss_singlecell, reduction = "tsne", label = TRUE)
+plot_grid(p1, p2)
+# 使用split.by参数根据不同的条件进行分割对比展示
+DimPlot(immune.combined, reduction = "umap", split.by = "stim")
+DimPlot(immune.combined, reduction = "tsne", split.by = "stim")
+#4 鉴定保守的细胞类型标记基因
+# 使用FindConservedMarkers函数进行差异分析识别保守的细胞类型标记基因
+library(metap)
+library(BiocManager)
+library(multtest)
+library(BiocManager)
+library(limma)
+nk.markers <- FindConservedMarkers(Ss_singlecell, ident.1 = 7, grouping.var = "stim", verbose = FALSE)
+head(nk.markers)
+# 可视化标记基因
+FeaturePlot(Ss_singlecell, features = c("Ssc-10021618-g"), min.cutoff = "q9")
+# 对不同细胞类群进行注释重命名
+new.cluster.ids <- c("0"="Endothelial cell",
+"1"="Sertoli cell",
+"2"="Diff1-Spermatogonia",
+"3"="Stroma cell",
+"4"="Spermatid",
+"5"="Un-Diff-Spermatogonia-1",
+"6"="Leydig cell",
+"7"="Spermatocytes-2",
+"8"="Blood cell",
+"9"="Sertoli cell",
+"10"="Macrophage",
+"11"="Spermatocytes-1",
+"12"="Un-Diff-Spermatogonia-2",
+"13"="Spermatocytes-2",
+"14"="Diff2-Spermatogonia",
+"15"="Diff2-Spermatogonia",
+"16"="Un-Diff-Spermatogonia-1")
+Ss_singlecell <- RenameIdents(Ss_singlecell, new.cluster.ids)
+Ss_singlecell$celltype <- Ss_singlecell@active.ident
+
+# 细胞分群可视化
+DimPlot(Ss_singlecell, label = TRUE)
+使用DotPlot函数对marker基因进行可视化，其中split.by参数可用于查看不同条件下的保守细胞类型marker基因，显示特定细胞类群中基因的表达水平和细胞的百分比。在这里，我们展示了13个细胞类群中每个群中的2-3个强标记基因。
+
+
+DotPlot(Ss_singlecell, features = rev(markers.to.plot), cols = c("blue", "red"), dot.scale = 8, split.by = "stim") + RotatedAxis()
